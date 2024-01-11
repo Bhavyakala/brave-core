@@ -16,6 +16,7 @@
 #include "base/gtest_prod_util.h"
 #include "base/memory/raw_ptr.h"
 #include "base/memory/weak_ptr.h"
+#include "base/types/expected.h"
 #include "brave/components/brave_wallet/browser/asset_discovery_manager.h"
 #include "brave/components/brave_wallet/browser/bitcoin/bitcoin_wallet_service.h"
 #include "brave/components/brave_wallet/browser/brave_wallet_p3a.h"
@@ -87,16 +88,8 @@ class BraveWalletService : public KeyedService,
   mojo::PendingRemote<mojom::BraveWalletService> MakeRemote();
   void Bind(mojo::PendingReceiver<mojom::BraveWalletService> receiver);
 
-  static void MigrateUserAssetEthContractAddress(PrefService* profile_prefs);
-  static void MigrateMultichainUserAssets(PrefService* profile_prefs);
-  static void MigrateUserAssetsAddPreloadingNetworks(
-      PrefService* profile_prefs);
-  static void MigrateUserAssetsAddIsNFT(PrefService* profile_prefs);
   static void MigrateHiddenNetworks(PrefService* profile_prefs);
-  static void MigrateUserAssetsAddIsERC1155(PrefService* profile_prefs);
-  static void MigrateUserAssetsAddIsSpam(PrefService* profile_prefs);
   static void MigrateFantomMainnetAsCustomNetwork(PrefService* prefs);
-  static void MigrateCeloMainnetAsCustomNetwork(PrefService* prefs);
 
   static bool AddUserAsset(mojom::BlockchainTokenPtr token,
                            bool visible,
@@ -347,8 +340,7 @@ class BraveWalletService : public KeyedService,
 
   void OnGenerateZecReceiveAddress(
       GenerateReceiveAddressCallback callback,
-      mojom::ZCashAddressPtr,
-      const std::optional<std::string>& error_message);
+      base::expected<mojom::ZCashAddressPtr, std::string> result);
 
   static std::optional<std::string> GetChecksumAddress(
       const std::string& contract_address,

@@ -1,6 +1,6 @@
 {
   "name": "brave-core",
-  "version": "1.63.99",
+  "version": "1.63.111",
   "description": "Brave Core is a set of changes, APIs and scripts used for customizing Chromium to make Brave.",
   "main": "index.js",
   "scripts": {
@@ -66,7 +66,7 @@
     "projects": {
       "chrome": {
         "dir": "src",
-        "tag": "120.0.6099.199",
+        "tag": "120.0.6099.217",
         "repository": {
           "url": "https://github.com/brave/chromium"
         }
@@ -119,7 +119,7 @@
     "ethereum-blockies": "github:brave/blockies#0880fa9867b7da039e6d6f143b8f6c57b9f9eb3b",
     "ethereumjs-util": "7.0.9",
     "file-loader": "6.2.0",
-    "follow-redirects": "1.14.8",
+    "follow-redirects": "1.15.4",
     "font-awesome": "4.7.0",
     "fs-extra": "8.1.0",
     "https-browserify": "1.0.0",

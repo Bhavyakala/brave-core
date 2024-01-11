@@ -16,6 +16,9 @@ import {
   LineChartIframeData
 } from '../../../../constants/types'
 
+// constants
+import { emptyRewardsInfo } from '../../../../common/async/base-query-cache'
+
 // Utils
 import Amount from '../../../../utils/amount'
 import {
@@ -34,10 +37,7 @@ import {
 import { getLocale } from '../../../../../common/locale'
 import { makeNetworkAsset } from '../../../../options/asset-options'
 import { makeDepositFundsRoute } from '../../../../utils/routes-utils'
-import {
-  getIsRewardsToken,
-  getRewardsBATToken
-} from '../../../../utils/rewards_utils'
+import { getIsRewardsToken } from '../../../../utils/rewards_utils'
 import {
   getStoredPortfolioTimeframe //
 } from '../../../../utils/local-storage-utils'
@@ -74,8 +74,7 @@ import {
   useGetTokenSpotPricesQuery,
   useGetPriceHistoryQuery,
   useGetDefaultFiatCurrencyQuery,
-  useGetRewardsEnabledQuery,
-  useGetExternalRewardsWalletQuery,
+  useGetRewardsInfoQuery,
   useGetCoinMarketQuery
 } from '../../../../common/slices/api.slice'
 import {
@@ -150,8 +149,7 @@ export const PortfolioAsset = (props: Props) => {
 
   // Queries
   const { data: defaultFiat = 'USD' } = useGetDefaultFiatCurrencyQuery()
-  const { data: isRewardsEnabled } = useGetRewardsEnabledQuery()
-  const { data: externalRewardsInfo } = useGetExternalRewardsWalletQuery()
+  const { data: { rewardsToken } = emptyRewardsInfo } = useGetRewardsInfoQuery()
   const { data: coinMarketData = [] } = useGetCoinMarketQuery({
     limit: 250,
     vsAsset: defaultFiat
@@ -159,13 +157,10 @@ export const PortfolioAsset = (props: Props) => {
 
   // Memos
   const userTokensInfo = React.useMemo(() => {
-    const rewardsToken = getRewardsBATToken(
-      externalRewardsInfo?.provider ?? undefined
-    )
-    return isRewardsEnabled && rewardsToken
+    return rewardsToken
       ? [rewardsToken, ...userVisibleTokensInfo]
       : userVisibleTokensInfo
-  }, [isRewardsEnabled, userVisibleTokensInfo])
+  }, [userVisibleTokensInfo, rewardsToken])
 
   // params
   const selectedAssetFromParams = React.useMemo(() => {
@@ -326,21 +321,33 @@ export const PortfolioAsset = (props: Props) => {
   }, [selectedAssetFromParams])
 
   const selectedAssetTransactions = React.useMemo(() => {
+    const nativeAsset = makeNetworkAsset(selectedAssetsNetwork)
+
     if (selectedAssetFromParams) {
       const filteredTransactions = transactionsByNetwork.filter((tx) => {
         const token = findTransactionToken(tx, [selectedAssetFromParams])
 
-        const { sellToken, buyToken } = getETHSwapTransactionBuyAndSellTokens({
-          nativeAsset: makeNetworkAsset(selectedAssetsNetwork),
-          tokensList: [selectedAssetFromParams],
-          tx
-        })
         const selectedAssetIdKey = getAssetIdKey(selectedAssetFromParams)
-        return (
-          (token && selectedAssetIdKey === getAssetIdKey(token)) ||
-          (sellToken && selectedAssetIdKey === getAssetIdKey(sellToken)) ||
-          (buyToken && selectedAssetIdKey === getAssetIdKey(buyToken))
-        )
+        const tokenId = token ? getAssetIdKey(token) : undefined
+
+        if (tx.txType === BraveWallet.TransactionType.ETHSwap) {
+          const { sellToken, buyToken } = getETHSwapTransactionBuyAndSellTokens(
+            {
+              nativeAsset,
+              tokensList: [selectedAssetFromParams],
+              tx
+            }
+          )
+          const buyTokenId = buyToken ? getAssetIdKey(buyToken) : undefined
+          const sellTokenId = sellToken ? getAssetIdKey(sellToken) : undefined
+          return (
+            selectedAssetIdKey === tokenId ||
+            selectedAssetIdKey === buyTokenId ||
+            selectedAssetIdKey === sellTokenId
+          )
+        }
+
+        return selectedAssetIdKey === tokenId
       })
       return sortTransactionByDate(filteredTransactions, 'descending')
     }

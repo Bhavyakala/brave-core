@@ -14,7 +14,6 @@ import FeedNavigation from '../../../../brave_news/browser/resources/FeedNavigat
 import NewsButton from '../../../../brave_news/browser/resources/NewsButton'
 import Variables from '../../../../brave_news/browser/resources/Variables'
 import { useBraveNews } from '../../../../brave_news/browser/resources/shared/Context'
-import { isPublisherEnabled } from '../../../../brave_news/browser/resources/shared/api'
 import { CLASSNAME_PAGE_STUCK } from '../page'
 
 const Root = styled(Variables)`
@@ -61,7 +60,7 @@ const ButtonsContainer = styled.div`
 const SettingsButton = styled(Button)`
   --leo-button-color: var(--bn-glass-50);
   --leo-button-radius: ${radius.s};
-  --leo-button-padding: ${spacing.m};
+  --leo-button-padding: ${spacing.s};
 `
 
 const LoadNewContentButton = styled(NewsButton)`
@@ -73,23 +72,7 @@ const LoadNewContentButton = styled(NewsButton)`
 `
 
 export default function FeedV2() {
-  const { feedV2, setCustomizePage, refreshFeedV2, feedV2UpdatesAvailable, publishers, channels } = useBraveNews()
-
-  // We don't want to decide whether we have subscriptions until the publishers
-  // and channels have loaded.
-  const loaded = React.useMemo(() => !!Object.values(publishers).length && !!Object.values(channels).length, [publishers, channels])
-
-  // This is a bit of an interesting |useMemo| - we only want it to be updated
-  // when the feed changes so as to not break the case where:
-  // 1. The user has no feeds (we show the NoFeeds card)
-  // 2. The user subscribes to a feed (we should still show the NoFeeds card,
-  //    not the "Empty Feed")
-  // To achieve this, |hasSubscriptions| is only updated when the feed changes,
-  // or the opt-in status is changed.
-  const hasSubscriptions = React.useMemo(() => !loaded
-    || Object.values(publishers).some(isPublisherEnabled)
-    || Object.values(channels).some(c => c.subscribedLocales.length), [feedV2, loaded])
-
+  const { feedV2, setCustomizePage, refreshFeedV2, feedV2UpdatesAvailable } = useBraveNews()
   const ref = React.useRef<HTMLDivElement>()
 
   // Note: Whenever the feed is updated, if we're viewing the feed, scroll to
@@ -111,12 +94,12 @@ export default function FeedV2() {
       {feedV2UpdatesAvailable && <LoadNewContentButton onClick={refreshFeedV2}>
         {getLocale('braveNewsNewContentAvailable')}
       </LoadNewContentButton>}
-      <Feed feed={feedV2} hasSubscriptions={hasSubscriptions} />
+      <Feed feed={feedV2} />
     </Flex>
 
     <ButtonsContainer>
       <SettingsButton fab kind='outline' onClick={() => setCustomizePage('news')} title={getLocale('braveNewsCustomizeFeed')}>
-        <Icon name="settings" />
+        <Icon name="tune" />
       </SettingsButton>
       <SettingsButton fab isLoading={!feedV2} kind='outline' title={getLocale('braveNewsRefreshFeed')} onClick={() => {
         refreshFeedV2()

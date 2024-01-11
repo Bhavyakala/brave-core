@@ -30,6 +30,7 @@
 #include "brave/components/brave_rewards/core/recovery/recovery.h"
 #include "brave/components/brave_rewards/core/report/report.h"
 #include "brave/components/brave_rewards/core/rewards_callbacks.h"
+#include "brave/components/brave_rewards/core/rewards_log_stream.h"
 #include "brave/components/brave_rewards/core/state/state.h"
 #include "brave/components/brave_rewards/core/uphold/uphold.h"
 #include "brave/components/brave_rewards/core/wallet/wallet.h"
@@ -55,7 +56,12 @@ inline constexpr uint64_t kPublisherListRefreshInterval =
 #endif
 
 class InitializationManager;
+class URLLoader;
 class LinkageChecker;
+
+namespace wallet_provider {
+class WalletProvider;
+}
 
 class RewardsEngineImpl : public mojom::RewardsEngine {
  public:
@@ -249,32 +255,6 @@ class RewardsEngineImpl : public mojom::RewardsEngine {
 
   // mojom::RewardsEngineClient helpers begin (in the order of appearance in
   // Mojom)
-  template <typename Callback>
-  void LoadURL(mojom::UrlRequestPtr request, Callback callback) {
-    DCHECK(request);
-    if (IsShuttingDown()) {
-      BLOG(1, request->url + " will not be executed as we are shutting down");
-      return;
-    }
-
-    if (!request->skip_log) {
-      BLOG(5,
-           UrlRequestToString(request->url, request->headers, request->content,
-                              request->content_type, request->method));
-    }
-
-    if constexpr (std::is_same_v<Callback, LoadURLCallback>) {
-      client_->LoadURL(std::move(request), std::move(callback));
-    } else {
-      client_->LoadURL(std::move(request),
-                       base::BindOnce(
-                           [](LegacyLoadURLCallback callback,
-                              mojom::UrlResponsePtr response) {
-                             callback(std::move(response));
-                           },
-                           std::move(callback)));
-    }
-  }
 
   template <typename T>
   T GetState(const std::string& name) {
@@ -339,6 +319,19 @@ class RewardsEngineImpl : public mojom::RewardsEngine {
 
   mojom::ClientInfoPtr GetClientInfo();
 
+  // Performs logging to the Rewards logging file as implemented by the client.
+  //
+  //   Log(FROM_HERE) << "This will appear in the log file when verbose logging"
+  //                     "is enabled.";
+  //
+  //   LogError(FROM_HERE) << "This will always appear in the log file."
+  //                          "Do not use with arbitrary strings or data!";
+  //
+  // NOTE: Do not use arbitrary strings when using `LogError`, as this can
+  // result in sensitive data being written to the Rewards log file.
+  RewardsLogStream Log(base::Location location);
+  RewardsLogStream LogError(base::Location location);
+
   std::optional<std::string> EncryptString(const std::string& value);
 
   std::optional<std::string> DecryptString(const std::string& value);
@@ -379,13 +372,14 @@ class RewardsEngineImpl : public mojom::RewardsEngine {
 
   zebpay::ZebPay* zebpay() { return &zebpay_; }
 
+  wallet_provider::WalletProvider* GetExternalWalletProvider(
+      const std::string& wallet_type);
+
   // This method is virtualised for test-only purposes.
   virtual database::Database* database();
 
  private:
   bool IsReady() const;
-
-  bool IsShuttingDown() const;
 
   void OnInitializationComplete(InitializeCallback callback, bool success);
 
@@ -397,6 +391,7 @@ class RewardsEngineImpl : public mojom::RewardsEngine {
   mojo::AssociatedRemote<mojom::RewardsEngineClient> client_;
 
   std::tuple<std::unique_ptr<InitializationManager>,
+             std::unique_ptr<URLLoader>,
              std::unique_ptr<LinkageChecker>>
       helpers_;
 

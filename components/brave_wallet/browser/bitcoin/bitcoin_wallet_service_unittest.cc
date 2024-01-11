@@ -53,7 +53,6 @@ void PrintTo(const BitcoinBalancePtr& balance, ::std::ostream* os) {
 }
 }  // namespace mojom
 
-// TODO(apaymyshev): cover failure scenarios for BitcoinWalletService with tests
 class BitcoinWalletServiceUnitTest : public testing::Test {
  public:
   BitcoinWalletServiceUnitTest()
@@ -255,7 +254,7 @@ TEST_F(BitcoinWalletServiceUnitTest, GetUtxos) {
   utxo_6.vout = "7";
   utxo_6.value = "50000";
   utxo_6.status.confirmed = true;
-  EXPECT_EQ(expected_utxos.size(), 10u);
+  EXPECT_EQ(expected_utxos.size(), 12u);
 
   GetUtxosResult actual_utxos;
   EXPECT_CALL(callback, Run(Truly([&](const GetUtxosResult& arg) {
